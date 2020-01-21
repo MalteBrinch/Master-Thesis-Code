@@ -1,18 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[10]:
 
 
-import astropy.io.fits as fits
 import numpy as np
 import random
 import matplotlib.pyplot as plt
 import pymc3 as pm
-import theano
-import theano.tensor as tt
-from theano.tensor import fft
-import theano.tensor.signal.conv
 
 
 # In[2]:
@@ -23,15 +18,15 @@ import theano.tensor.signal.conv
 np.random.seed(int(input("Enter the seed: ")))
 
 n = int(input("Enter the number of data points: "))
-tau = np.linspace(0.0, 1000.0, n)#delay times for transfer function 
-start = float(input("Enter the start time of observation: "))
-end = float(input("Enter the end time of observation: "))
+tau = np.linspace(0.0, 1000.0, n)#delay times for transfer function, set between 0-1000 days 
+start = float(input("Enter the start time of observation[d]: "))
+end = float(input("Enter the end time of observation[d]: "))
 X = np.linspace(start, end, n)[:, None] # The inputs to the GP, they must be arranged as a column vector
 
 # Define the true covariance function and its parameters
 ℓ_true = float(input("Enter the timescale of variation for the driving function(ℓ_true=2*ℓ^2): "))#timescale of variation for the driving function
 #REMEMBER time scale is 2*ℓ^2 so remember to rewrite as ℓ_true=2*ℓ^2
-η_true = float(input("Enter the long term standard deviation for the driving function: "))#long term standard deviation for the driving function
+η_true = float(input("Enter the long term standard deviation for the driving function[mag]: "))#long term standard deviation for the driving function
 α_true = float(input("Enter the exponent related to the PSD slope (alpha): "))#exponent related to the PSD slope 
 np.savetxt('hyperparameters.txt',np.c_[ℓ_true,η_true,α_true],delimiter=',')
 cov_func = η_true**2 * pm.gp.cov.Exponential(1, 2.0**((α_true-1.0)/2.0)*ℓ_true**(α_true))
@@ -159,7 +154,7 @@ if a == "yes":
     np.savetxt('ADparameters.txt',np.c_[JpAD,HpAD,KpAD,gpAD,rpAD,ipAD,zpAD],delimiter=',')
 elif a == "no":
     #create data for all bands
-    pDT = list(map(float,input('Enter the universal dusty torus values;sigma_DT[log(d)] m_DT[d] theta_DT[d] T[K]: ').split()))
+    pDT = list(map(float,input('Enter the universal dusty torus values;sigma_DT[log(d)],m_DT[d],theta_DT[d],T[K]: ').split(',')))
     K_0 = float(input("Enter the power law constant K_0: "))
     index = float(input("Enter the power law index: "))
     k = float(input("Enter the noise boost factor k: "))
@@ -167,49 +162,50 @@ elif a == "no":
     np.savetxt('Universalparameters.txt',np.concatenate([pDT,[K_0],[index],[k]]),delimiter=',')
     
     Jwav = float(input("Enter the J-band wavelength[nm]: "))
-    JpAD = list(map(float,input('Enter J-band accretion disk values;sigma_AD[log(d)] m_AD[d] theta_AD[d]: ').split()))
+    JpAD = list(map(float,input('Enter J-band accretion disk values;sigma_AD[log(d)],m_AD[d],theta_AD[d]: ').split(',')))
     Jnoisescale = float(input("Enter the noise scale: "))/k
     Jband = createdata(f_true, tau, Jwav, K_0, index, pDT, JpAD, Jnoisescale)
     np.savetxt('Jband.txt',np.c_[Jband[0],Jband[1]],delimiter=',')
     
     Hwav = float(input("Enter the H-band wavelength[nm]: "))
-    HpAD = list(map(float,input('Enter H-band accretion disk values;sigma_AD[log(d)] m_AD[d] theta_AD[d]: ').split()))
+    HpAD = list(map(float,input('Enter H-band accretion disk values;sigma_AD[log(d)],m_AD[d],theta_AD[d]: ').split(',')))
     Hnoisescale = float(input("Enter the noise scale: "))/k
     Hband = createdata(f_true, tau, Hwav, K_0, index, pDT, HpAD,Hnoisescale)
     np.savetxt('Hband.txt',np.c_[Hband[0],Hband[1]],delimiter=',')
     
     Kwav = float(input("Enter the K-band wavelength[nm]: "))
-    KpAD = list(map(float,input('Enter K-band accretion disk values;sigma_AD[log(d)] m_AD[d] theta_AD[d]: ').split()))
+    KpAD = list(map(float,input('Enter K-band accretion disk values;sigma_AD[log(d)],m_AD[d],theta_AD[d]: ').split(',')))
     Knoisescale = float(input("Enter the noise scale: "))/k
     Kband = createdata(f_true, tau, Kwav, K_0, index, pDT, KpAD, Knoisescale)
     np.savetxt('Kband.txt',np.c_[Kband[0],Kband[1]],delimiter=',')
     
     gwav = float(input("Enter the g-band wavelength[nm]: "))
-    gpAD = list(map(float,input('Enter g-band accretion disk values;sigma_AD[log(d)] m_AD[d] theta_AD[d]: ').split()))
+    gpAD = list(map(float,input('Enter g-band accretion disk values;sigma_AD[log(d)],m_AD[d],theta_AD[d]: ').split(',')))
     gnoisescale = float(input("Enter the noise scale: "))/k
     gband = createdata(f_true, tau, gwav, K_0, index, pDT, gpAD,gnoisescale)
     np.savetxt('gband.txt',np.c_[gband[0],gband[1]],delimiter=',')
     
     rwav = float(input("Enter the r-band wavelength[nm]: "))
-    rpAD = list(map(float,input('Enter r-band accretion disk values;sigma_AD[log(d)] m_AD[d] theta_AD[d]: ').split()))
+    rpAD = list(map(float,input('Enter r-band accretion disk values;sigma_AD[log(d)],m_AD[d],theta_AD[d]: ').split(',')))
     rnoisescale = float(input("Enter the noise scale: "))/k
     rband = createdata(f_true, tau, rwav, K_0, index, pDT, rpAD, rnoisescale)
     np.savetxt('rband.txt',np.c_[rband[0],rband[1]],delimiter=',')
     
     iwav = float(input("Enter the i-band wavelength[nm]: "))
-    ipAD = list(map(float,input('Enter i-band accretion disk values;sigma_AD[log(d)] m_AD[d] theta_AD[d]: ').split()))
+    ipAD = list(map(float,input('Enter i-band accretion disk values;sigma_AD[log(d)],m_AD[d],theta_AD[d]: ').split(',')))
     inoisescale = float(input("Enter the noise scale: "))/k
     iband = createdata(f_true, tau, iwav, K_0, index, pDT, ipAD, inoisescale)
     np.savetxt('iband.txt',np.c_[iband[0],iband[1]],delimiter=',')
     
     zwav = float(input("Enter the z-band wavelength[nm]: "))
-    zpAD = list(map(float,input('Enter z-band accretion disk values;sigma_AD[log(d)] m_AD[d] theta_AD[d]: ').split()))
+    zpAD = list(map(float,input('Enter z-band accretion disk values;sigma_AD[log(d)],m_AD[d],theta_AD[d]: ').split(',')))
     znoisescale = float(input("Enter the noise scale: "))/k
     zband = createdata(f_true, tau, zwav, K_0, index, pDT, zpAD, znoisescale)
     np.savetxt('zband.txt',np.c_[zband[0],zband[1]],delimiter=',')
     
     #Saves all the accretion disk paramters
     np.savetxt('ADparameters.txt',np.c_[JpAD,HpAD,KpAD,gpAD,rpAD,ipAD,zpAD],delimiter=',')
+print('data is saved as "*band.txt" where * is the band')
 
 
 # In[17]:
@@ -243,6 +239,8 @@ np.savetxt('rediband.txt',np.c_[rediband[0],rediband[1]],delimiter=',')
 
 redzband = [zband[0][ind],zband[1][ind]]
 np.savetxt('redzband.txt',np.c_[redzband[0],redzband[1]],delimiter=',')
+
+print('reduced data is saved as "red*band.txt" where * is the band')
 
 
 # In[ ]:
